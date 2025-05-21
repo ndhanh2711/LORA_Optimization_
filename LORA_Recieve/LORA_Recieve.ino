@@ -1,57 +1,57 @@
-/*********
-  Rui Santos & Sara Santos - Random Nerd Tutorials
-  Modified from the examples of the Arduino LoRa library
-  More resources: https://RandomNerdTutorials.com/esp32-lora-rfm95-transceiver-arduino-ide/
-*********/
-
 #include <SPI.h>
 #include <LoRa.h>
 
-//define the pins used by the transceiver module
-#define ss 8
-#define rst 7
-#define dio0 12
-
+// Định nghĩa chân kết nối với module LoRa
+#define ss 7
+#define rst 12
+#define dio0 3
+#define LED 1
 void setup() {
-  //initialize Serial Monitor
   Serial.begin(115200);
+  pinMode(1, OUTPUT);
+  digitalWrite(LED, LOW);
   while (!Serial);
-  Serial.println("LoRa Receiver");
+  Serial.println("LoRa Receiver - Tối ưu tầm xa");
 
-  SPI.begin(4, 1, 10, 8);
-  //setup LoRa transceiver module
+  SPI.begin(10, 8, 5, ss);
   LoRa.setPins(ss, rst, dio0);
-  
-  //replace the LoRa.begin(---E-) argument with your location's frequency 
-  //433E6 for Asia
-  //868E6 for Europe
-  //915E6 for North America
+
   while (!LoRa.begin(433E6)) {
-    Serial.println(".");
+    Serial.println("Đang kết nối với LoRa...");
     delay(500);
   }
-   // Change sync word (0xF3) to match the receiver
-  // The sync word assures you don't get LoRa messages from other LoRa transceivers
-  // ranges from 0-0xFF
-  LoRa.setSyncWord(0xF3);
-  Serial.println("LoRa Initializing OK!");
+
+  // Cấu hình giống hệt bên phát:
+  LoRa.setSpreadingFactor(12);
+  LoRa.setSignalBandwidth(125E3);
+  LoRa.setCodingRate4(8);
+  LoRa.setPreambleLength(24);
+  LoRa.enableCrc();
+  LoRa.setSyncWord(0x22);
+  
+  Serial.println("LoRa đã sẵn sàng để nhận dữ liệu ở cấu hình tối đa.");
 }
 
 void loop() {
-  // try to parse packet
   int packetSize = LoRa.parsePacket();
   if (packetSize) {
-    // received a packet
-    Serial.print("Received packet '");
-
-    // read packet
-    while (LoRa.available()) {
-      String LoRaData = LoRa.readString();
-      Serial.print(LoRaData); 
+    // Nháy LED 2 lần
+    for (int i = 0; i < 2; i++) {
+      digitalWrite(LED, HIGH);
+      delay(100);
+      digitalWrite(LED, LOW);
+      delay(100);
     }
 
-    // print RSSI of packet
-    Serial.print("' with RSSI ");
-    Serial.println(LoRa.packetRssi());
+    // In nội dung và thông số RSSI/SNR
+    Serial.print("Received: ");
+    while (LoRa.available()) {
+      String LoRaData = LoRa.readString();
+      Serial.print(LoRaData);
+    }
+    Serial.print(" | RSSI: ");
+    Serial.print(LoRa.packetRssi());
+    Serial.print(" dBm | SNR: ");
+    Serial.println(LoRa.packetSnr());
   }
 }
